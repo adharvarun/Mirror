@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mirror · Dashboard</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <style>
+    body {font-family: 'Segoe UI', Roboto, sans-serif; background:#0e1117; color:#e4e4e4; margin:0;}
+    .wrap {max-width:1100px; margin: 24px auto; padding: 0 16px;}
+    .header {display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+    .h1 {font-size:24px; font-weight:700; color:#58a6ff}
+    .grid {display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px;}
+    .card {background:#161b22; border:1px solid #30363d; border-radius:12px; padding:16px;}
+    .muted {color:#8b949e;}
+    table {width:100%; border-collapse: collapse; font-size:14px;}
+    th, td {padding:8px 10px; border-bottom:1px solid #30363d; vertical-align: top;}
+    th {text-align:left; color:#8b949e; font-weight:600;}
+    code {background:#0d1117; padding:2px 4px; border-radius:6px;}
+    .pill {display:inline-block; padding:2px 8px; border-radius:999px; background:#30363d; color:#c9d1d9; font-size:12px;}
+    a {color:#58a6ff; text-decoration:none;}
+  </style>
+  <script>
+    function copy(text) { navigator.clipboard.writeText(text); }
+  </script>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <div class="h1">Mirror Dashboard</div>
+        <div><a href="/" title="Back to chat">← Back to Chat</a></div>
+      </div>
+
+      <div class="grid" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="muted">Total Messages</div>
+          <div style="font-size:28px; font-weight:700; margin-top:6px;">{{ total_messages }}</div>
+        </div>
+        <div class="card">
+          <div class="muted">Top Emotions</div>
+          <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+            {% for row in emotion_counts %}
+              <span class="pill">{{ row["emotion"] }} · {{ row["count"] }}</span>
+            {% else %}
+              <span class="muted">No data</span>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="card">
+          <div class="muted">Recent Sessions</div>
+          <table style="margin-top:8px;">
+            <thead>
+              <tr><th>Session</th><th>Last Message</th><th>Count</th></tr>
+            </thead>
+            <tbody>
+              {% for s in recent_sessions %}
+                <tr>
+                  <td><code title="Click to copy" onclick="copy('{{ s['session_id'] }}')">{{ s["session_id"][:8] }}…</code></td>
+                  <td>{{ s["last_time"] }}</td>
+                  <td>{{ s["msg_count"] }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="3" class="muted">No sessions yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="muted">Recent Messages</div>
+        <table style="margin-top:8px;">
+          <thead>
+            <tr><th>Time</th><th>Session</th><th>Role</th><th>Emotion</th><th>Text</th></tr>
+          </thead>
+          <tbody>
+            {% for m in recent_messages %}
+              <tr>
+                <td style="white-space:nowrap;">{{ m["created_at"] }}</td>
+                <td><code title="Click to copy" onclick="copy('{{ m['session_id'] }}')">{{ m["session_id"][:8] }}…</code></td>
+                <td>{{ m["role"] }}</td>
+                <td>{{ m["emotion"] or 'unknown' }}</td>
+                <td>{{ m["text"] }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5" class="muted">No messages yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </body>
+  </html>
+
+

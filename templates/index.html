@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mirror</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.js"></script>
+  <script src="https://kit.fontawesome.com/1c42d02712.js" crossorigin="anonymous"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(56,139,253,0.08), transparent 60%),
+                  radial-gradient(1000px 500px at 90% 0%, rgba(35,134,54,0.07), transparent 55%),
+                  #0e1117;
+      color: #e4e4e4;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-wrapper {
+      display: flex;
+      flex-direction: column;
+      width: 92vw;
+      max-width: 900px;
+      height: 86vh;
+      max-height: 820px;
+      background: rgba(22, 27, 34, 0.85);
+      border-radius: 20px;
+      box-shadow: 0 10px 50px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+      border: 1px solid #30363d;
+      backdrop-filter: saturate(140%) blur(6px);
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      background: linear-gradient(180deg, #0f1520, #161b22 55%);
+      border-bottom: 1px solid #30363d;
+      color: #58a6ff;
+    }
+    .chat-header .brand {display:flex; align-items:center; gap:14px;}
+    .chat-header img {border-radius: 14px; width: 44px; height: 44px;}
+    .chat-header .titles {display:flex; flex-direction:column;}
+    .chat-header .app-name {font-size: 20px; font-weight: 700; letter-spacing: 0.3px;}
+    .chat-header .subtitle {font-size: 12px; color: #8b949e; margin-top: 2px;}
+
+    .chat-content {
+      flex: 1;
+      padding: 20px 24px;
+      overflow-y: auto;
+      background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scrollbar-width: thin;
+      scrollbar-color: #444 #161b22;
+    }
+    .chat-content::-webkit-scrollbar {width: 10px;}
+    .chat-content::-webkit-scrollbar-thumb {background: #30363d; border-radius: 8px;}
+    .chat-content::-webkit-scrollbar-track {background: transparent;}
+
+    .chat-message {
+      padding: 14px 18px;
+      border-radius: 14px;
+      max-width: 70%;
+      line-height: 1.5;
+      font-size: 15px;
+      animation: fadeIn 0.3s ease-in-out;
+      word-wrap: break-word;
+    }
+
+    .chat-message.user {
+      background: #238636;
+      align-self: flex-end;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(35,134,54,0.4);
+    }
+
+    .chat-message.bot {
+      background: #1f6feb;
+      align-self: flex-start;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(31,111,235,0.4);
+    }
+
+    .chat-message.thinking {
+      background: #2d333b;
+      color: #aaa;
+      font-style: italic;
+      align-self: flex-start;
+    }
+
+    .chat-message p {margin: 0 0 8px 0;}
+    .chat-message p:last-child {margin-bottom: 0;}
+    .chat-message ul, .chat-message ol {margin: 8px 0 8px 16px; padding: 0 0 0 12px;}
+    .chat-message code {background: rgba(0,0,0,0.25); padding: 2px 6px; border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+    .chat-message pre {background: rgba(0,0,0,0.25); padding: 12px; border-radius: 10px; overflow: auto;}
+    .chat-message a {color: #ffd166; text-decoration: underline;}
+
+    .chat-input {
+      display: flex;
+      padding: 14px 16px;
+      background: #0f1520;
+      border-top: 1px solid #30363d;
+      gap: 12px;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: none;
+      outline: none;
+      background: #2d333b;
+      color: #e4e4e4;
+      font-size: 15px;
+      transition: box-shadow .2s ease, background .2s ease;
+    }
+    .chat-input input::placeholder {color: #8b949e;}
+    .chat-input input:focus {box-shadow: 0 0 0 2px rgba(88,166,255,0.35) inset; background: #30363d;}
+
+    .chat-input button {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      background: #58a6ff;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .chat-input button:hover {
+      background: #1f6feb;
+    }
+    .chat-input button:disabled {
+      background: #2d333b;
+      color: #8b949e;
+      cursor: not-allowed;
+    }
+
+    .chat-footer {
+      text-align: center;
+      padding: 12px;
+      background: #0d1117;
+      font-size: 13px;
+      color: #8b949e;
+      border-top: 1px solid #30363d;
+    }
+    .chat-footer a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(10px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    @media (max-width: 600px) {
+      .chat-message {max-width: 88%;}
+      .chat-header .subtitle {display:none;}
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-wrapper">
+    <div class="chat-header">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Mirror Logo" />
+        <div class="titles">
+          <div class="app-name">Mirror</div>
+          <div class="subtitle">See your mood, clearer</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-content" id="chatBox"></div>
+
+    <div class="chat-input">
+      <input type="text" id="userInput" placeholder="Type a message..." aria-label="Message input" onkeypress="handleKeyPress(event)">
+      <button id="sendButton" title="Send (Enter)" onclick="sendMessage()" disabled><i class="fa fa-paper-plane"></i></button>
+    </div>
+
+    <div class="chat-footer">
+      Made with ❤️ by <a href="https://adharvarun.tech" target="_blank">Adharv Arun</a> · <a href="/dashboard" target="_blank">Dashboard</a>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+  <script>
+    var converter = new showdown.Converter();
+    document.addEventListener("DOMContentLoaded", function() {
+      const chatBox = document.getElementById("chatBox");
+      const input = document.getElementById("userInput");
+      const sendBtn = document.getElementById("sendButton");
+      const welcomeMsg = document.createElement("div");
+      welcomeMsg.classList.add("chat-message", "bot");
+      welcomeMsg.innerHTML = `Welcome to <strong>Mirror</strong>!<br> 
+      Your personal emotion detection and mood mirror assistant is here to help you understand yourself better - one expression at a time.`;
+      chatBox.appendChild(welcomeMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      function toggleSendState() {
+        const hasText = input.value.trim().length > 0;
+        sendBtn.disabled = !hasText;
+      }
+      input.addEventListener('input', toggleSendState);
+      toggleSendState();
+    });
+
+    const socket = io();
+    let thinkingIndicator = null;
+
+    function sendMessage() {
+      const input = document.getElementById("userInput");
+      const message = input.value.trim();
+      if (!message) return;
+
+      const chatBox = document.getElementById("chatBox");
+      const userMsg = document.createElement("div");
+      userMsg.classList.add("chat-message", "user");
+      userMsg.textContent = message;
+      chatBox.appendChild(userMsg);
+      input.value = "";
+
+      showThinking();
+      socket.emit("message", message);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === "Enter") sendMessage();
+    }
+
+    function showThinking() {
+      const chatBox = document.getElementById("chatBox");
+      thinkingIndicator = document.createElement("div");
+      thinkingIndicator.classList.add("chat-message", "thinking");
+      thinkingIndicator.innerText = "Mirror is thinking...";
+      chatBox.appendChild(thinkingIndicator);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function hideThinking() {
+      if (thinkingIndicator) {
+        thinkingIndicator.remove();
+        thinkingIndicator = null;
+      }
+    }
+
+    socket.on("response", function(data) {
+      hideThinking();
+      const chatBox = document.getElementById("chatBox");
+      const botMsg = document.createElement("div");
+      botMsg.classList.add("chat-message", "bot");
+      botMsg.innerHTML = converter.makeHtml(data);
+      chatBox.appendChild(botMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+  </script>
+</body>
+</html>
