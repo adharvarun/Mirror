@@ -10,6 +10,9 @@ Mirror is a desktop + web hybrid that detects facial emotion with OpenCV and ser
 - Recent session history included in prompts for better context
 - Dashboard at `/dashboard`
 
+## Video Demo
+[https://youtu.be/VSHev87VBLk](https://youtu.be/VSHev87VBLk)
+
 ## Requirements
 - Python 3.10+
 - Webcam
